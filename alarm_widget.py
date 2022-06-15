@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
+# https://www.geeksforgeeks.org/pyqt5-create-a-digital-clock/
 
 class _Time(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs):
