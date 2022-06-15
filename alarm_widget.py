@@ -11,6 +11,9 @@ class _Time(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.MinimumExpanding,
             QtWidgets.QSizePolicy.MinimumExpanding
         )
+        self._time = '00:00'
+
+
 
     def sizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(300, 70)
@@ -34,25 +37,25 @@ class _Time(QtWidgets.QWidget):
         font = painter.font()
         # font.setFamily('Times')
 
-        time = '17:00'
-        QtCore.QTime()
         period = 'AM'
         time_y = 75
         time_start = 0
 
         font.setPointSize(50)
         painter.setFont(font)
-        painter.drawText(time_start, time_y, time)
+        painter.drawText(time_start, time_y, self._time)
 
         font.setPointSize(12)
         painter.setFont(font)
 
-        if len(time) == 5:
+        if len(self._time) == 5:
             painter.drawText(time_start+170, time_y, period)
         else:
             painter.drawText(time_start+135, time_y, period)
 
         painter.end()
+
+
 
 
 class AlarmWidget(QtWidgets.QWidget):
@@ -70,6 +73,19 @@ class AlarmWidget(QtWidgets.QWidget):
 
         # self._createTimeLayout()
         # self._createTimeUntil()
+        self.timer = QtCore.QTimer(self)
+        self.timer.timeout.connect(self._showTime)
+        self.timer.start(1000)
+
+    def _showTime(self):
+        # getting current time
+        current_time = QtCore.QTime.currentTime()
+
+        # converting QTime object to string
+        label_time = current_time.toString('hh:mm')
+
+        self._time._time = label_time
+        self._time.update()
 
     def _createTimeLayout(self):
         timeLayout = QtWidgets.QHBoxLayout()
