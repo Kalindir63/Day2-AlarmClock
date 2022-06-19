@@ -3,6 +3,8 @@
 # Filename: pycalc.py
 
 """PyAlarm"""
+import gzip
+import json
 import random
 import sys
 import pandas as pd
@@ -33,18 +35,20 @@ ApplicationName = 'PyAlarm'
 
 """
     TODO List
-    0.5: accept time, message, dow select with class
-    1: Add new Alarms with message and settings
-    2: Save alarm (with pos)
-    3: Edit alarm
-    4: Delete Alarm
-    5: Actual Alarm notifications and sound
+    0.5: accept time, message, dow (bit string) with class          *DONE*
+    1: Add new Alarms with message and settings                     **
+    2: Save alarms (with pos) and Load alarms                       *DONE* + GZIP Compression
+    3: Edit alarm                                                   **
+    4: Delete Alarm                                                 **
+    5: Actual Alarm notifications and sound                         **
     6:
     7:
     ..
-    97: Bug-Fix - Time until alarm using dow
-    98: Bonus - Global timer to reduce number of timers
-    99: Bonus - Move Alarms around grid
+    96: Bug-fix - dow update with edit                              **
+    97: Bug-fix - Time until alarm using dow                        **
+    98: Bonus - Global timer to reduce number of timers             **
+    99: Bonus - Move Alarms around grid                             **
+    100: Bonus x2 - Add Tabs for alarms that exceed 6x6 alarms      ** 
 """
 
 
@@ -234,16 +238,83 @@ class PyAppUi(QMainWindow):
         self.setWindowTitle(ApplicationName)
         #         # self.setFixedSize(235, 235)
         #         # Set the central widget and the general layout
-        self.generalLayout = QVBoxLayout()
+        self.generalLayout = QGridLayout()
         self._centralWidget = QWidget(self)
         self.setCentralWidget(self._centralWidget)
         self._centralWidget.setLayout(self.generalLayout)
 
-        self.generalLayout.addWidget(AlarmWidget())
-        self.generalLayout.addWidget(AlarmWidget())
-        self.generalLayout.addWidget(AlarmWidget())
+        # Load Alarms from Json file
+        self._loadAlarms()
 
+        # Save alarms after load to ensure positions are correct
+        self._saveAlarms()
         self.show()
+
+    def _loadAlarms(self):
+        # alarms = [
+        #     {
+        #         'time': '4:16pm',
+        #         'dow': '0001',
+        #         'message': 'Home time!!',
+        #         'enabled': True,
+        #         'position': (0, 0)
+        #     },
+        #     {
+        #         'time': '5:30am',
+        #         'dow': '0111',
+        #         'message': 'Wake up time!!',
+        #         'enabled': False,
+        #         'position': (0, 0)
+        #     }
+        # ]
+        # with gzip.open('alarms.json.gzip') as fin:
+        #     alarms = json.loads(fin.read().decode('utf-8'))
+
+        with open('alarms.json') as file:
+            alarms = json.load(file)
+
+        self.alarms = []
+        for alarm in alarms:
+            # alarm = alarm.items()
+            alarm_widget = AlarmWidget(
+                time=alarm['time'],
+                dow=alarm['dow'],
+                message=alarm['message'],
+                enabled=alarm['enabled'],
+                position=alarm['position']
+            )
+            position = self.addWidgetToLayout(alarm_widget, int(alarm['position'][0]), int(alarm['position'][1]))
+            alarm_widget._position = position
+
+            self.alarms.append(alarm_widget)
+
+    def addWidgetToLayout(self, widget, row, column):
+        maxRow = 6
+        maxCol = 6
+        while True:
+            if row >= maxRow and column >= maxCol:
+                print("Can't place widget")
+                break
+            if self.generalLayout.itemAtPosition(row, column):
+                print('item at position')
+                if column < maxCol:
+                    column += 1
+                else:
+                    row += 1
+                    column = 0
+
+            else:
+                self.generalLayout.addWidget(widget, row, column)
+                break
+        return row, column
+
+    def _saveAlarms(self):
+        alarms = [alarm.Save() for alarm in self.alarms]
+        # print(alarms)
+        with open('alarms.json', 'w') as file:
+            json.dump(alarms, file)
+        # with gzip.open('alarms.json.gzip', 'w') as fout:
+        #     fout.write(json.dumps(alarms).encode('utf-8'))
 
 
 # Client code

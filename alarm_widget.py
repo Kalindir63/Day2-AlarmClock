@@ -270,10 +270,10 @@ class _Time(QtWidgets.QWidget):
 
     def getTimeUntilText(self):
         current_time = QtCore.QTime.currentTime()
-        format = 'hh:mmap'
+        timeFormat = 'hh:mmap'
         if len(self._time) < 5:
-            format = 'h:mmap'
-        alarm_time = QtCore.QTime.fromString(f'{self._time}{self._timePeriod}', format)
+            timeFormat = 'h:mmap'
+        alarm_time = QtCore.QTime.fromString(f'{self._time}{self._timePeriod}', timeFormat)
 
         secs_until = current_time.secsTo(alarm_time)
 
@@ -298,13 +298,42 @@ class _Time(QtWidgets.QWidget):
         self.update()
 
 
+class _Edit(QtWidgets.QWidget):
+    def __init__(self, message='', *args, **kwargs):
+        super(_Edit, self).__init__(*args, **kwargs)
+        self.generalLayout = QtWidgets.QVBoxLayout()
+
+        self.setLayout(self.generalLayout)
+
+        label = QtWidgets.QLabel('Alarm Settings')
+        self.generalLayout.addWidget(label, alignment=Qt.AlignTop | Qt.AlignCenter)
+
+        editLayout = QtWidgets.QFormLayout()
+        # Add edit options
+
+        # Delete button
+
+        # save button
+        # cancel button
+
+        # Size policy
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.MinimumExpanding,
+            QtWidgets.QSizePolicy.MinimumExpanding
+        )
+
+    def sizeHint(self) -> QtCore.QSize:
+        return QtCore.QSize(286, 201)
+
+
 class AlarmWidget(QtWidgets.QWidget):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, dow='', time='00:00am', message='Alarm', enabled=False, position=(0, 0), *args, **kwargs):
         super(AlarmWidget, self).__init__(*args, **kwargs)
         # Variables
-        self.message = 'Good morning'
-        self.timeLabel = '7:00'
-        self.timePeriod = 'am'
+        self.message = message
+        self.time = time
+        self.dow = dow
+        self._position = position
 
         self.default_colors = {
             'ActiveText': QtGui.QColor('white'),
@@ -316,7 +345,9 @@ class AlarmWidget(QtWidgets.QWidget):
         self._backgroundColor = self.default_colors['Background']
         self._textColor = self.default_colors['InActiveText']
 
-        self._enabled = False
+        self._enabled = enabled
+
+        self.editPopup = None
 
         # Set Colors
         palette = self.palette()
@@ -352,6 +383,8 @@ class AlarmWidget(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.Fixed
         )
 
+        self._toggleElements()
+
     def sizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(286, 201)
 
@@ -378,9 +411,19 @@ class AlarmWidget(QtWidgets.QWidget):
         self.generalLayout.setRowStretch(1, 1)
         self.generalLayout.addWidget(self.messageLabel, 1, 0, alignment=Qt.AlignTop | Qt.AlignLeft)
 
+    def update(self) -> None:
+        super(AlarmWidget, self).update()
+        self._showTime()
+
     def _showTime(self):
-        self._time._time = self.timeLabel
-        self._time._timePeriod = self.timePeriod
+        timeFormat = 'hh:mmap'
+        if len(self.time) < 7:
+            timeFormat = 'h:mmap'
+        alarm_time = QtCore.QTime.fromString(self.time, timeFormat)
+        alarm_time_str = alarm_time.toString(timeFormat)
+
+        self._time._time = alarm_time_str[:-2]
+        self._time._timePeriod = alarm_time_str[-2:]
         self._time.update()
 
     def _createDowLayout(self):
@@ -397,8 +440,9 @@ class AlarmWidget(QtWidgets.QWidget):
         ]
         self._dowWidgets = {}
 
+        dowSet = self.dow.ljust(7, '0')
         for item in enumerate(dow):
-            self._dowWidgets[item[1]] = _DowIcon(item[1], item[0] % 2 == 0)
+            self._dowWidgets[item[1]] = _DowIcon(item[1], dowSet[item[0]] == '1')
             self._dowWidgets[item[1]].setPalette(self.palette())
             dowSize = 28
             self._dowWidgets[item[1]].setFixedSize(dowSize, dowSize)
@@ -412,6 +456,7 @@ class AlarmWidget(QtWidgets.QWidget):
 
     def _createEnableCheckbox(self):
         self.checkbox = _Toggle(checked_color=self.default_colors['ActivePrimary'].name())
+        self.checkbox.setChecked(self._enabled)
 
         self.generalLayout.setRowStretch(0, 1)
         self.generalLayout.setColumnStretch(1, 1)
@@ -442,3 +487,48 @@ class AlarmWidget(QtWidgets.QWidget):
 
         self.messageLabel.setPalette(palette)
         # self._time.setPalette(palette)
+
+    def Save(self):
+        return {
+            'time': self.time,
+            'dow': self.dow,
+            'message': self.message,
+            'enabled': self._enabled,
+            'position': self._position
+        }
+
+    def Edit(self):
+        # popup simple edit screen
+        if self.editPopup is None:
+            self.editPopup = _Edit(self.message)
+            self.editPopup.show()
+        else:
+            self.editPopup.close()
+            self.editPopup = None
+
+    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
+        # if event.button() == Qt.LeftButton:
+        #     self.pressPos = event.pos()
+        self.Edit()
+
+        # widget = self.childAt(event.pos())
+        # print(widget)
+
+# void MainWindow::mousePressEvent(QMouseEvent *event)
+# {
+#     QWidget * const widget = childAt(event->pos());
+#     qDebug() << "child widget" << widget;
+#     if (widget) {
+#         const QLabel * const label = qobject_cast<QLabel *>(widget);
+#         if (label) {
+#             qDebug() << "label" << label->text();
+#         }
+#
+#         const int index = centralWidget()->layout()->indexOf(widget);
+#         qDebug() << "layout index" << index;
+#         if (index >=0) {
+#             const QLayoutItem * const item = centralWidget()->layout()->itemAt(index);
+#             qDebug() << "layout item" << item;
+#         }
+#     }
+# }
