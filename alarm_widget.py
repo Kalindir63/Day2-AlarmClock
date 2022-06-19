@@ -10,6 +10,7 @@ from PyQt5.QtCore import Qt, pyqtSlot as Slot, pyqtProperty as Property
 class _Toggle(QtWidgets.QCheckBox):
     _transparent_pen = QtGui.QPen(Qt.transparent)
     _light_grey_pen = QtGui.QPen(Qt.lightGray)
+    clickedValue = QtCore.pyqtSignal(int)
 
     def __init__(self,
                  bar_color=Qt.gray,
@@ -61,30 +62,29 @@ class _Toggle(QtWidgets.QCheckBox):
         barRectPath = QtGui.QPainterPath()
         barRectPath.addRoundedRect(barRect, rounding, rounding)
 
-
         # the handle will move along this line
         trailLength = (containerRect.width() - 2 * handleRadius) - 6
         xPos = containerRect.x() + handleRadius + 2 + trailLength * self._handle_position
 
-
-
         # Draw Line
         if self.isChecked():
             painter.setBrush(self._bar_checked_brush)
-            # painter.drawRoundedRect(barRect, rounding, rounding)
-            painter.setPen(self._bar_checked_pen)
-            painter.drawPath(barRectPath)
-            painter.setBrush(self._handle_checked_brush)
+            # painter.setPen(self._bar_checked_pen)
+            painter.drawRoundedRect(barRect, rounding, rounding)
+            # painter.drawPath(barRectPath)
+            # painter.setBrush(self._handle_checked_brush)
 
         else:
-            painter.setBrush(self._bar_brush)
-            # painter.drawRoundedRect(barRect, rounding, rounding)
-            painter.setPen(self._bar_pen)
-            painter.drawPath(barRectPath)
-            painter.setPen(self._light_grey_pen)
-            painter.setBrush(self._handle_brush)
+            # painter.setBrush(self._bar_brush)
+            painter.setPen(QtGui.QPen(QtGui.QColor('white')))
+            painter.drawRoundedRect(barRect, rounding, rounding)
+            # painter.drawPath(barRectPath)
+            # painter.setPen(self._light_grey_pen)
+            # painter.setBrush(self._handle_brush)
 
         # Draw handle
+        painter.setBrush(self._handle_brush)
+        painter.setPen(QtGui.QPen(QtGui.QColor('white')))
         painter.drawEllipse(
             QtCore.QPointF(xPos, barRect.center().y()),
             handleRadius, handleRadius)
@@ -133,6 +133,8 @@ class _DowIcon(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.MinimumExpanding
         )
 
+        self._active = False
+
     def sizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(300, 100)
 
@@ -155,8 +157,8 @@ class _DowIcon(QtWidgets.QWidget):
         painter.setBrush(brush)
         # Modify pen
         pen = painter.pen()
-        if self._enabled:
-            pen.setColor(QtGui.QColor('white'))
+        # if not self._enabled:
+        #     pen.setColor(QtGui.QColor('white'))
         # pen.setColor(QtGui.QColor('red'))
         painter.setPen(pen)
 
@@ -166,8 +168,17 @@ class _DowIcon(QtWidgets.QWidget):
         # Get Font
         font = painter.font()
 
+        if self._active:
+            pen.setColor(QtGui.QColor('green'))
+            painter.setPen(pen)
+
         # Draw Shape
-        painter.drawEllipse(rect)
+        if self._enabled:
+            painter.drawEllipse(rect)
+
+        else:
+            pen.setColor(QtGui.QColor('grey'))
+            painter.setPen(pen)
 
         # Draw text
         font.setPointSize(10)
@@ -176,14 +187,18 @@ class _DowIcon(QtWidgets.QWidget):
 
         painter.end()
 
+    def setActive(self, a0: bool) -> None:
+        self._active = a0
+        self.update()
+
 
 class _Time(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs):
         super(_Time, self).__init__(*args, **kwargs)
 
         self.setSizePolicy(
-            QtWidgets.QSizePolicy.MinimumExpanding,
-            QtWidgets.QSizePolicy.MinimumExpanding
+            QtWidgets.QSizePolicy.Fixed,
+            QtWidgets.QSizePolicy.Fixed
         )
         self._time = '00:00'
         self._timePeriod = 'am'
@@ -193,8 +208,15 @@ class _Time(QtWidgets.QWidget):
         self._backgroundColor = QtGui.QColor('#2B2B2B')
         self._textColor = QtGui.QColor('#808080')
 
+        palette = self.palette()
+        palette.setColor(self.backgroundRole(), self._backgroundColor)
+        palette.setColor(self.foregroundRole(), self._textColor)
+        self.setPalette(palette)
+
+        self._enabled = False
+
     def sizeHint(self) -> QtCore.QSize:
-        return QtCore.QSize(300, 100)
+        return QtCore.QSize(200, 85)
 
     def _trigger_refresh(self):
         self.update()
@@ -208,9 +230,10 @@ class _Time(QtWidgets.QWidget):
         # brush.setStyle(Qt.SolidPattern)
         rect = QtCore.QRect(0, 0, painter.device().width(), painter.device().height())
         painter.fillRect(rect, brush)
+        # print(rect.size())
 
         pen = painter.pen()
-        # pen.setColor(self._textColor)
+        pen.setColor(self._textColor)
         painter.setPen(pen)
 
         font = painter.font()
@@ -218,6 +241,10 @@ class _Time(QtWidgets.QWidget):
 
         time_y = 2
         time_start = 2
+
+        if self._enabled:
+            pen.setColor(QtGui.QColor('white'))
+            painter.setPen(pen)
 
         font.setPointSize(50)
         timeFontMetric = QtGui.QFontMetrics(font)
@@ -231,13 +258,14 @@ class _Time(QtWidgets.QWidget):
 
         painter.drawText(time_start + timeWidth, time_y, self._timePeriod.upper())
 
+        pen.setColor(self._textColor)
+        painter.setPen(pen)
+
         timeUntil = self.getTimeUntilText()
         timeUntilFontMetric = QtGui.QFontMetrics(font)
         timeUntilHeight = timeUntilFontMetric.height()
         painter.drawText(time_start, time_y + timeUntilHeight + 5, timeUntil)
 
-        # print(time_y + timeUntilHeight + 5)
-        # print(time_start+ timeUntilFontMetric.width(timeUntil))
         painter.end()
 
     def getTimeUntilText(self):
@@ -265,6 +293,10 @@ class _Time(QtWidgets.QWidget):
 
         return f'⏰ in {hours_text}, {minutes_text}'
 
+    def setEnabled(self, a0: bool) -> None:
+        self._enabled = a0
+        self.update()
+
 
 class AlarmWidget(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs):
@@ -274,8 +306,17 @@ class AlarmWidget(QtWidgets.QWidget):
         self.timeLabel = '7:00'
         self.timePeriod = 'am'
 
-        self._backgroundColor = QtGui.QColor('#2B2B2B')
-        self._textColor = QtGui.QColor('#808080')
+        self.default_colors = {
+            'ActiveText': QtGui.QColor('white'),
+            'InActiveText': QtGui.QColor('#808080'),
+            'ActivePrimary': QtGui.QColor('#107C10'),
+            'Background': QtGui.QColor('#2B2B2B'),
+        }
+
+        self._backgroundColor = self.default_colors['Background']
+        self._textColor = self.default_colors['InActiveText']
+
+        self._enabled = False
 
         # Set Colors
         palette = self.palette()
@@ -294,6 +335,10 @@ class AlarmWidget(QtWidgets.QWidget):
 
         self.setLayout(self.generalLayout)
 
+        # painter = QtGui.QPainter(self)
+        # print(painter.device().width(), painter.device().height())
+        # self.generalLayout.setGeometry(QtCore.QRect(0,0,640,480))
+
         # Timer
         self._showTime()
         self.timer = QtCore.QTimer(self)
@@ -301,23 +346,22 @@ class AlarmWidget(QtWidgets.QWidget):
         seconds = 1
         self.timer.start(seconds * 1000)
 
-    # def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
-    #     painter = QtGui.QPainter(self)
-    #
-    #     brush = QtGui.QBrush()
-    #     # brush.setColor(QtGui.QColor('transparent'))
-    #     brush.setColor(self._backgroundColor)
-    #     brush.setStyle(Qt.SolidPattern)
-    #     rect = QtCore.QRect(0, 0, painter.device().width(), painter.device().height())
-    #     painter.fillRect(rect, brush)
+        # Size policy
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Fixed,
+            QtWidgets.QSizePolicy.Fixed
+        )
+
+    def sizeHint(self) -> QtCore.QSize:
+        return QtCore.QSize(286, 201)
 
     def _createTimeLabel(self):
         self._time = _Time()
-        self._time.setFixedHeight(81)
+        self._time.setFixedHeight(85)
         self._time.setFixedWidth(200)
         # self._time.setFixedSize(50,70)
-        self.generalLayout.setColumnStretch(0, 0)
-        self.generalLayout.setRowStretch(0, 0)
+        self.generalLayout.setColumnStretch(0, 1)
+        self.generalLayout.setRowStretch(0, 1)
         self.generalLayout.addWidget(self._time, 0, 0, alignment=Qt.AlignTop | Qt.AlignLeft)
 
     def _createMessageLabel(self):
@@ -330,8 +374,8 @@ class AlarmWidget(QtWidgets.QWidget):
         self.messageLabel.setPalette(self.palette())
         self.messageLabel.setFont(font)
         self.messageLabel.setFixedHeight(height)
-        self.generalLayout.setColumnStretch(0, 0)
-        self.generalLayout.setRowStretch(1, 0)
+        self.generalLayout.setColumnStretch(0, 1)
+        self.generalLayout.setRowStretch(1, 1)
         self.generalLayout.addWidget(self.messageLabel, 1, 0, alignment=Qt.AlignTop | Qt.AlignLeft)
 
     def _showTime(self):
@@ -351,19 +395,50 @@ class AlarmWidget(QtWidgets.QWidget):
             'Fri',
             'Sa',
         ]
+        self._dowWidgets = {}
 
-        for item in dow:
-            dowWidget = _DowIcon(item, True)
-            dowWidget.setPalette(self.palette())
+        for item in enumerate(dow):
+            self._dowWidgets[item[1]] = _DowIcon(item[1], item[0] % 2 == 0)
+            self._dowWidgets[item[1]].setPalette(self.palette())
             dowSize = 28
-            dowWidget.setFixedSize(dowSize, dowSize)
-            dowWidget.setAntialiased(True)
+            self._dowWidgets[item[1]].setFixedSize(dowSize, dowSize)
+            self._dowWidgets[item[1]].setAntialiased(True)
 
-            dowLayout.addWidget(dowWidget)
+            dowLayout.addWidget(self._dowWidgets[item[1]])
 
+        self.generalLayout.setRowStretch(2, 2)
+        self.generalLayout.setColumnStretch(0, 1)
         self.generalLayout.addLayout(dowLayout, 2, 0, 2, 0, alignment=Qt.AlignTop | Qt.AlignLeft)
 
     def _createEnableCheckbox(self):
-        self.checkbox = _Toggle()
+        self.checkbox = _Toggle(checked_color=self.default_colors['ActivePrimary'].name())
 
+        self.generalLayout.setRowStretch(0, 1)
+        self.generalLayout.setColumnStretch(1, 1)
         self.generalLayout.addWidget(self.checkbox, 0, 1, alignment=Qt.AlignTop | Qt.AlignRight)
+
+        self.checkbox.clicked.connect(self._state_changed)
+
+    def _state_changed(self):
+        if self.checkbox.isChecked():
+            self._enabled = True
+        else:
+            self._enabled = False
+
+        self._toggleElements()
+
+    def _toggleElements(self):
+        self._time.setEnabled(self._enabled)
+        for dowName, dowWidget in self._dowWidgets.items():
+            dowWidget.setActive(self._enabled)
+
+        palette = self.palette()
+
+        if self._enabled:
+            palette.setColor(self.foregroundRole(), self.default_colors['ActiveText'])
+
+        else:
+            palette.setColor(self.foregroundRole(), self.default_colors['InActiveText'])
+
+        self.messageLabel.setPalette(palette)
+        # self._time.setPalette(palette)

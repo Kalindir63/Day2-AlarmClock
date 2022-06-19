@@ -31,6 +31,22 @@ __author__ = "Bradley"
 ERROR_MSG = 'ERROR'
 ApplicationName = 'PyAlarm'
 
+"""
+    TODO List
+    0.5: accept time, message, dow select with class
+    1: Add new Alarms with message and settings
+    2: Save alarm (with pos)
+    3: Edit alarm
+    4: Delete Alarm
+    5: Actual Alarm notifications and sound
+    6:
+    7:
+    ..
+    97: Bug-Fix - Time until alarm using dow
+    98: Bonus - Global timer to reduce number of timers
+    99: Bonus - Move Alarms around grid
+"""
+
 
 def clearLayout(layout):
     while layout.count():
@@ -45,6 +61,7 @@ class KeyPressWidget(QWidget):
     def keyPressEvent(self, event):
         super(KeyPressWidget, self).keyPressEvent(event)
         self.keyPressed.emit(event.key())
+
 
 # class AlarmWidget(QWidget):
 #     def __init__(self):
@@ -197,18 +214,36 @@ class KeyPressWidget(QWidget):
 #         # for btnText, btn in self._view.buttons.items():
 #         #     if btnText not in {'='}:
 #         #         btn.clicked.connect(partial(self._checkLetter, btnText))
+#
+#
+# # Create a Model to handle the calculator's operation
+# def evaluateExpression(expression):
+#     """Evaluate an expression"""
+#     try:
+#         print(expression)
+#         result = str(eval(expression, {}, {}))
+#     except Exception:
+#         result = ERROR_MSG
+#
+#     return result
 
+class PyAppUi(QMainWindow):
+    def __init__(self, *args, **kwargs):
+        super(PyAppUi, self).__init__(*args, **kwargs)
 
-# Create a Model to handle the calculator's operation
-def evaluateExpression(expression):
-    """Evaluate an expression"""
-    try:
-        print(expression)
-        result = str(eval(expression, {}, {}))
-    except Exception:
-        result = ERROR_MSG
+        self.setWindowTitle(ApplicationName)
+        #         # self.setFixedSize(235, 235)
+        #         # Set the central widget and the general layout
+        self.generalLayout = QVBoxLayout()
+        self._centralWidget = QWidget(self)
+        self.setCentralWidget(self._centralWidget)
+        self._centralWidget.setLayout(self.generalLayout)
 
-    return result
+        self.generalLayout.addWidget(AlarmWidget())
+        self.generalLayout.addWidget(AlarmWidget())
+        self.generalLayout.addWidget(AlarmWidget())
+
+        self.show()
 
 
 # Client code
@@ -224,8 +259,10 @@ def main():
     # bar.setBackgroundColor('gray')
     # bar.show()
 
-    alarm = AlarmWidget()
-    alarm.show()
+    # alarm = AlarmWidget()
+    # alarm.show()
+
+    view = PyAppUi()
 
     # Create instances of the model and the controller
     # model = evaluateExpression
