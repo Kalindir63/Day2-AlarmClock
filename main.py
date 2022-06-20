@@ -12,17 +12,8 @@ import pandas as pd
 from functools import partial
 
 # Import QApplication and required widgets from PyQt5.QtWidgets
-from PyQt5 import QtCore
-from PyQt5.QtGui import QFont, QKeySequence
-from PyQt5.QtWidgets import QApplication, QLabel, QHBoxLayout, QStyle, QMessageBox
-from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtWidgets import QWidget
-
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QGridLayout
-from PyQt5.QtWidgets import QLineEdit
-from PyQt5.QtWidgets import QPushButton
-from PyQt5.QtWidgets import QVBoxLayout
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt, pyqtSlot as Slot, pyqtProperty as Property
 
 from alarm_widget import AlarmWidget
 from power_bar import PowerBar
@@ -38,8 +29,8 @@ ApplicationName = 'PyAlarm'
     0.5: accept time, message, dow (bit string) with class          *DONE*
     1: Add new Alarms with message and settings                     **
     2: Save alarms (with pos) and Load alarms                       *DONE* + GZIP Compression
-    3: Edit alarm                                                   **
-    4: Delete Alarm                                                 **
+    3: Edit alarm                                                   *Started*
+    4: Delete Alarm                                                 *Partial, no save*
     5: Actual Alarm notifications and sound                         **
     6:
     7:
@@ -59,7 +50,7 @@ def clearLayout(layout):
             child.widget().deleteLater()
 
 
-class KeyPressWidget(QWidget):
+class KeyPressWidget(QtWidgets.QWidget):
     keyPressed = QtCore.pyqtSignal(int)
 
     def keyPressEvent(self, event):
@@ -231,24 +222,66 @@ class KeyPressWidget(QWidget):
 #
 #     return result
 
-class PyAppUi(QMainWindow):
+class PyAppUi(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(PyAppUi, self).__init__(*args, **kwargs)
 
         self.setWindowTitle(ApplicationName)
-        #         # self.setFixedSize(235, 235)
-        #         # Set the central widget and the general layout
-        self.generalLayout = QGridLayout()
-        self._centralWidget = QWidget(self)
+        self.setFixedSize(1200, 933)
+
+        # Variables
+        self._dimmed = False
+
+        # Set the central widget and the general layout
+        self.generalLayout = QtWidgets.QGridLayout()
+        self._centralWidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self._centralWidget)
         self._centralWidget.setLayout(self.generalLayout)
+        self.generalLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
         # Load Alarms from Json file
         self._loadAlarms()
-
         # Save alarms after load to ensure positions are correct
         self._saveAlarms()
+
+        # Default color scheme
+        self.default_colors = {
+            'ActiveText': QtGui.QColor('white'),
+            'InActiveText': QtGui.QColor('#808080'),
+            'ActivePrimary': QtGui.QColor('#107C10'),
+            'Background': QtGui.QColor('#1F1F1F'),
+        }
+
+        # Setup Color Scheme
+        palette = self.palette()
+        palette.setColor(self.backgroundRole(), self.default_colors['Background'])
+        palette.setColor(self.foregroundRole(), self.default_colors['ActivePrimary'])
+        self.setPalette(palette)
+
+        # Size policy
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.MinimumExpanding,
+            QtWidgets.QSizePolicy.MinimumExpanding
+        )
+
+        # Connect Alarm click
+        self._connectSignals()
+
+        self.move(368, 55)
         self.show()
+
+    def _connectSignals(self):
+        """Connect signals and slots."""
+        for alarm in self.alarms:
+            alarm.clicked.connect(self._dimWindow)
+            alarm.deleted.connect(self._deleteWidget)
+
+    def _deleteWidget(self, widget):
+        widget.deleteLater()
+
+    def sizeHint(self) -> QtCore.QSize:
+        rect = QtCore.QRect(0, 0, 1200, 933)
+        return rect.size()
 
     def _loadAlarms(self):
         # alarms = [
@@ -289,8 +322,8 @@ class PyAppUi(QMainWindow):
             self.alarms.append(alarm_widget)
 
     def addWidgetToLayout(self, widget, row, column):
-        maxRow = 6
-        maxCol = 6
+        maxRow = 4
+        maxCol = 4
         while True:
             if row >= maxRow and column >= maxCol:
                 print("Can't place widget")
@@ -308,6 +341,31 @@ class PyAppUi(QMainWindow):
                 break
         return row, column
 
+    # def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
+    #     painter = QtGui.QPainter(self)
+    #     rect = QtCore.QRect(0, 0, painter.device().width(), painter.device().height())
+    #     brush = painter.brush()
+    #     brush.setStyle(Qt.SolidPattern)
+    #
+    #     brushColor = self.default_colors['Background'].darker()
+    #     brushColor.setAlpha(5)
+    #
+    #     if self._dimmed:
+    #         brush.setColor(brushColor)
+    #     else:
+    #         brush.setColor(QtGui.QColor('transparent'))
+    #     painter.setBrush(brush)
+    #
+    #     painter.drawRect(rect)
+    #
+    #     painter.end()
+
+    def _dimWindow(self):
+        print('dimmed')
+        self._dimmed = True
+        self.update()
+
+
     def _saveAlarms(self):
         alarms = [alarm.Save() for alarm in self.alarms]
         # print(alarms)
@@ -321,7 +379,7 @@ class PyAppUi(QMainWindow):
 def main():
     """Main function."""
     # Create an instance of QApplication
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     # Show the calculator's GUI
     # view = PyAppUi()
     # bar = PowerBar(["#49006a", "#7a0177", "#ae017e", "#dd3497", "#f768a1", "#fa9fb5", "#fcc5c0", "#fde0dd", "#fff7f3"])

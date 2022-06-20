@@ -299,22 +299,30 @@ class _Time(QtWidgets.QWidget):
 
 
 class _Edit(QtWidgets.QWidget):
-    def __init__(self, message='', *args, **kwargs):
-        super(_Edit, self).__init__(*args, **kwargs)
-        self.generalLayout = QtWidgets.QVBoxLayout()
+    deleted = QtCore.pyqtSignal(bool)
 
+    def __init__(self, newWidget=False, *args, **kwargs):
+        super(_Edit, self).__init__(*args, **kwargs)
+
+        # Window Flags
+        # self.setWindowFlag(Qt.FramelessWindowHint)
+
+        # General Layout
+        self.generalLayout = QtWidgets.QVBoxLayout()
         self.setLayout(self.generalLayout)
 
-        label = QtWidgets.QLabel('Alarm Settings')
-        self.generalLayout.addWidget(label, alignment=Qt.AlignTop | Qt.AlignCenter)
+        # Palette
+        primaryColor = '#107C10'
+        palette = self.palette()
+        palette.setColor(self.backgroundRole(), QtGui.QColor('#2B2B2B'))
+        palette.setColor(self.foregroundRole(), QtGui.QColor('white'))
+        self.setPalette(palette)
 
-        editLayout = QtWidgets.QFormLayout()
-        # Add edit options
+        # Variables
+        self._newWidget = newWidget
 
-        # Delete button
-
-        # save button
-        # cancel button
+        # Create UI
+        self._CreateUi()
 
         # Size policy
         self.setSizePolicy(
@@ -323,10 +331,62 @@ class _Edit(QtWidgets.QWidget):
         )
 
     def sizeHint(self) -> QtCore.QSize:
-        return QtCore.QSize(286, 201)
+        # Width: 321 px | Height: 548 px
+        return QtCore.QSize(321, 548)
+
+    def _CreateUi(self):
+        self._topTileLayout()
+
+        # time edit layout
+        # X: 3503 | Y: 289 | Right: 3782 | Bottom: 368
+        # Width: 280 px | Height: 80 px | Area: 22400 px | Perimeter: 720 px
+
+        editLayout = QtWidgets.QFormLayout()
+        # Add edit options
+
+        # save button
+        # cancel button
+
+    def _topTileLayout(self):
+        # top title layout
+        topTitleLayout = QtWidgets.QHBoxLayout()
+        # title - top left
+        if self._newWidget:
+            label = QtWidgets.QLabel('Add new alarm')
+        else:
+            label = QtWidgets.QLabel('Edit alarm')
+
+        font = QtGui.QFont()
+        font.setPixelSize(20)
+        label.setFont(font)
+
+        topTitleLayout.addWidget(label, alignment=Qt.AlignTop | Qt.AlignLeft)
+        # Delete button - top right
+        deleteBtn = QtWidgets.QPushButton()
+
+        pixmapi = self.style().SP_TrashIcon
+        icon = self.style().standardIcon(pixmapi)
+        deleteBtn.setIcon(icon)
+        deleteBtn.setStyleSheet("background-color: transparent")
+        topTitleLayout.addWidget(deleteBtn, alignment=Qt.AlignTop | Qt.AlignRight)
+
+        deleteBtn.clicked.connect(self._deletedConfirm)
+
+        self.generalLayout.addLayout(topTitleLayout)
+
+    def _deletedConfirm(self):
+        # Confirm message
+        # confirm = QtWidgets.QMessageBox.question(self, 'Title', 'message',
+        #                                          QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel,
+        #                                          QtWidgets.QMessageBox.Cancel)
+        # print(confirm)
+        self.deleted.emit(True)
 
 
 class AlarmWidget(QtWidgets.QWidget):
+    clicked = QtCore.pyqtSignal(bool)
+    deleted = QtCore.pyqtSignal(QtWidgets.QWidget)
+
     def __init__(self, dow='', time='00:00am', message='Alarm', enabled=False, position=(0, 0), *args, **kwargs):
         super(AlarmWidget, self).__init__(*args, **kwargs)
         # Variables
@@ -500,16 +560,23 @@ class AlarmWidget(QtWidgets.QWidget):
     def Edit(self):
         # popup simple edit screen
         if self.editPopup is None:
-            self.editPopup = _Edit(self.message)
+            # self.editPopup = _Edit(parent=self.parent().parent())
+            self.editPopup = _Edit()
+            self.editPopup.deleted.connect(self._deleteWidget)
             self.editPopup.show()
         else:
             self.editPopup.close()
             self.editPopup = None
 
+    def _deleteWidget(self):
+        self.Edit()
+        self.deleted.emit(self)
+
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
         # if event.button() == Qt.LeftButton:
         #     self.pressPos = event.pos()
         self.Edit()
+        self.clicked.emit(True)
 
         # widget = self.childAt(event.pos())
         # print(widget)
