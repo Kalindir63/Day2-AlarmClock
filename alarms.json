@@ -1,1 +1,42 @@
-[{"time": "4:16pm", "dow": "0001", "message": "Home time!!", "enabled": true, "position": [0, 0]}, {"time": "5:30am", "dow": "0111", "message": "Wake up time!!", "enabled": false, "position": [0, 1]}]
+[
+ {
+  "time": "4:16pm",
+  "dow": "0001",
+  "message": "Home time!!",
+  "enabled": true,
+  "position": [
+   0,
+   0
+  ]
+ },
+ {
+  "time": "5:30am",
+  "dow": "0111",
+  "message": "Wake up time!!",
+  "enabled": false,
+  "position": [
+   0,
+   1
+  ]
+ },
+ {
+  "time": "00:00am",
+  "dow": "",
+  "message": "Alarm",
+  "enabled": false,
+  "position": [
+   0,
+   2
+  ]
+ },
+ {
+  "time": "00:00am",
+  "dow": "",
+  "message": "Alarm",
+  "enabled": false,
+  "position": [
+   1,
+   0
+  ]
+ }
+]

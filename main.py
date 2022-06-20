@@ -25,12 +25,13 @@ ERROR_MSG = 'ERROR'
 ApplicationName = 'PyAlarm'
 
 """
+    qta-browser for icons
     TODO List
     0.5: accept time, message, dow (bit string) with class          *DONE*
     1: Add new Alarms with message and settings                     **
     2: Save alarms (with pos) and Load alarms                       *DONE* + GZIP Compression
     3: Edit alarm                                                   *Started*
-    4: Delete Alarm                                                 *Partial, no save*
+    4: Delete Alarm                                                 *DONE*
     5: Actual Alarm notifications and sound                         **
     6:
     7:
@@ -233,11 +234,20 @@ class PyAppUi(QtWidgets.QMainWindow):
         self._dimmed = False
 
         # Set the central widget and the general layout
-        self.generalLayout = QtWidgets.QGridLayout()
+        self.generalLayout = QtWidgets.QVBoxLayout()
         self._centralWidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self._centralWidget)
         self._centralWidget.setLayout(self.generalLayout)
+
         self.generalLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+
+        self.alarmLayout = QtWidgets.QGridLayout()
+        self.alarmLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+
+        self.generalLayout.addLayout(self.alarmLayout)
+
+        self.addButtonLayout = QtWidgets.QHBoxLayout()
+        self.generalLayout.addLayout(self.addButtonLayout)
 
         # Load Alarms from Json file
         self._loadAlarms()
@@ -265,19 +275,55 @@ class PyAppUi(QtWidgets.QMainWindow):
         )
 
         # Connect Alarm click
+        self._createUi()
         self._connectSignals()
 
         self.move(368, 55)
         self.show()
 
+    def _createUi(self):
+        self.addAlarmBtn = QtWidgets.QPushButton('+ Add an alarm')
+        self.addAlarmBtn.setStyleSheet(f"background-color: {self.default_colors['ActivePrimary'].name()};"
+                                       f"color: {self.default_colors['ActiveText'].name()};")
+        self.addButtonLayout.addWidget(self.addAlarmBtn, alignment=Qt.AlignRight | Qt.AlignBottom)
+
     def _connectSignals(self):
         """Connect signals and slots."""
+        self.addAlarmBtn.clicked.connect(self._addAlarm)
+
         for alarm in self.alarms:
             alarm.clicked.connect(self._dimWindow)
             alarm.deleted.connect(self._deleteWidget)
+            alarm.saved.connect(self._saveAlarmHandler)
+            alarm.cancelled.connect(self._cancelEditWidget)
+
+    def _addAlarm(self):
+        alarm_widget = AlarmWidget(newWidget=True)
+        alarm_widget.Edit()
+
+        alarm_widget.clicked.connect(self._dimWindow)
+        alarm_widget.deleted.connect(self._deleteWidget)
+        alarm_widget.saved.connect(self._saveAlarmHandler)
+        alarm_widget.cancelled.connect(self._cancelEditWidget)
+
+        position = self.addWidgetToLayout(alarm_widget, 0, 0)
+        alarm_widget._position = position
+        alarm_widget.hide()
+        self.alarms.append(alarm_widget)
+
+    def _saveAlarmHandler(self, widget):
+        print(widget)
+        widget.show()
+        self._saveAlarms()
+
+    def _cancelEditWidget(self, widget):
+        if widget.IsNewWidget():
+            self._deleteWidget(widget)
 
     def _deleteWidget(self, widget):
         widget.deleteLater()
+        self.alarms.remove(widget)
+        self._saveAlarms()
 
     def sizeHint(self) -> QtCore.QSize:
         rect = QtCore.QRect(0, 0, 1200, 933)
@@ -322,13 +368,13 @@ class PyAppUi(QtWidgets.QMainWindow):
             self.alarms.append(alarm_widget)
 
     def addWidgetToLayout(self, widget, row, column):
-        maxRow = 4
-        maxCol = 4
+        maxRow = 4 - 1
+        maxCol = 4 - 1
         while True:
             if row >= maxRow and column >= maxCol:
                 print("Can't place widget")
                 break
-            if self.generalLayout.itemAtPosition(row, column):
+            if self.alarmLayout.itemAtPosition(row, column):
                 print('item at position')
                 if column < maxCol:
                     column += 1
@@ -336,8 +382,12 @@ class PyAppUi(QtWidgets.QMainWindow):
                     row += 1
                     column = 0
 
+            # if column >= maxCol:
+            #     column = 0
+            #     row += 1
+
             else:
-                self.generalLayout.addWidget(widget, row, column)
+                self.alarmLayout.addWidget(widget, row, column)
                 break
         return row, column
 
@@ -365,12 +415,11 @@ class PyAppUi(QtWidgets.QMainWindow):
         self._dimmed = True
         self.update()
 
-
     def _saveAlarms(self):
         alarms = [alarm.Save() for alarm in self.alarms]
         # print(alarms)
         with open('alarms.json', 'w') as file:
-            json.dump(alarms, file)
+            json.dump(alarms, file, indent=True)
         # with gzip.open('alarms.json.gzip', 'w') as fout:
         #     fout.write(json.dumps(alarms).encode('utf-8'))
 
@@ -380,22 +429,9 @@ def main():
     """Main function."""
     # Create an instance of QApplication
     app = QtWidgets.QApplication(sys.argv)
-    # Show the calculator's GUI
-    # view = PyAppUi()
-    # bar = PowerBar(["#49006a", "#7a0177", "#ae017e", "#dd3497", "#f768a1", "#fa9fb5", "#fcc5c0", "#fde0dd", "#fff7f3"])
-    # bar.setBarPadding(2)
-    # bar.setBarSolidPercent(0.9)
-    # bar.setBackgroundColor('gray')
-    # bar.show()
-
-    # alarm = AlarmWidget()
-    # alarm.show()
 
     view = PyAppUi()
 
-    # Create instances of the model and the controller
-    # model = evaluateExpression
-    # PyAppCtrl(model=model, view=view)
     # Execute the calculator's main loop
     sys.exit(app.exec_())
 

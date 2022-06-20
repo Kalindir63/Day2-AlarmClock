@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, pyqtSlot as Slot, pyqtProperty as Property
+import qtawesome as qta
 
 
 # https://www.geeksforgeeks.org/pyqt5-create-a-digital-clock/
@@ -298,8 +299,32 @@ class _Time(QtWidgets.QWidget):
         self.update()
 
 
+class _IconLabel(QtWidgets.QWidget):
+    IconSize = QtCore.QSize(16, 16)
+    HorizontalSpacing = 2
+
+    def __init__(self, qta_id, text='', final_stretch=True, *args, **kwargs):
+        super(_IconLabel, self).__init__(*args, **kwargs)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        icon = QtWidgets.QLabel()
+        icon.setPixmap(qta.icon(qta_id).pixmap(self.IconSize))
+
+        layout.addWidget(icon)
+        layout.addSpacing(self.HorizontalSpacing)
+        layout.addWidget(QtWidgets.QLabel(text))
+
+        if final_stretch:
+            layout.addStretch()
+
+
 class _Edit(QtWidgets.QWidget):
     deleted = QtCore.pyqtSignal(bool)
+    cancelled = QtCore.pyqtSignal()
+    saved = QtCore.pyqtSignal()
 
     def __init__(self, newWidget=False, *args, **kwargs):
         super(_Edit, self).__init__(*args, **kwargs)
@@ -310,6 +335,14 @@ class _Edit(QtWidgets.QWidget):
         # General Layout
         self.generalLayout = QtWidgets.QVBoxLayout()
         self.setLayout(self.generalLayout)
+
+        # Default color scheme
+        self.default_colors = {
+            'ActiveText': QtGui.QColor('white'),
+            'InActiveText': QtGui.QColor('#808080'),
+            'ActivePrimary': QtGui.QColor('#107C10'),
+            'Background': QtGui.QColor('#2B2B2B'),
+        }
 
         # Palette
         primaryColor = '#107C10'
@@ -330,6 +363,18 @@ class _Edit(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.MinimumExpanding
         )
 
+        self._connectSignals()
+
+    def _connectSignals(self):
+        self.cancelBtn.clicked.connect(self._cancelledHandler)
+        self.saveBtn.clicked.connect(self._savedHandler)
+
+    def _cancelledHandler(self):
+        self.cancelled.emit()
+
+    def _savedHandler(self):
+        self.saved.emit()
+
     def sizeHint(self) -> QtCore.QSize:
         # Width: 321 px | Height: 548 px
         return QtCore.QSize(321, 548)
@@ -340,8 +385,19 @@ class _Edit(QtWidgets.QWidget):
         # time edit layout
         # X: 3503 | Y: 289 | Right: 3782 | Bottom: 368
         # Width: 280 px | Height: 80 px | Area: 22400 px | Perimeter: 720 px
+        self._timeLayout()
 
-        editLayout = QtWidgets.QFormLayout()
+        self._messageLayout()
+
+        self._repeatLayout()
+
+        self._dowLayout()
+
+        self._soundLayout()
+
+        self._snoozeLayout()
+
+        self._buttonsLayout()
         # Add edit options
 
         # save button
@@ -374,6 +430,62 @@ class _Edit(QtWidgets.QWidget):
 
         self.generalLayout.addLayout(topTitleLayout)
 
+    def _timeLayout(self):
+        timeLayout = QtWidgets.QVBoxLayout()
+
+        font = self.font()
+        font.setPixelSize(70)
+
+        self.timeEdit = QtWidgets.QTimeEdit()
+        self.timeEdit.setDisplayFormat('hh:mm ap')
+        self.timeEdit.setFont(font)
+        self.timeEdit.setButtonSymbols(self.timeEdit.NoButtons)
+        self.timeEdit.setWrapping(True)
+        self.timeEdit.setStyleSheet(f"background-color: black;"
+                                    f"border-color: {self.default_colors['ActivePrimary'].name()};"
+                                    f"color: white;")
+
+        timeLayout.addWidget(self.timeEdit)
+
+        # End _timeLayout
+        self.generalLayout.addLayout(timeLayout)
+
+    def _messageLayout(self):
+        messageLayout = QtWidgets.QHBoxLayout()
+        iconlabel = _IconLabel("fa.pencil-square-o")
+
+        messageLayout.addWidget(iconlabel)
+
+        self.generalLayout.addLayout(messageLayout)
+
+    def _repeatLayout(self):
+        pass
+
+    def _dowLayout(self):
+        pass
+
+    def _soundLayout(self):
+        pass
+
+    def _snoozeLayout(self):
+        pass
+
+    def _buttonsLayout(self):
+        btnLayout = QtWidgets.QHBoxLayout()
+        self.saveBtn = QtWidgets.QPushButton('Save')
+        self.saveBtn.setStyleSheet(f"background-color: {self.default_colors['ActivePrimary'].name()};"
+                                   f"color: {self.default_colors['ActiveText'].name()};")
+
+        btnLayout.addWidget(self.saveBtn)
+
+        self.cancelBtn = QtWidgets.QPushButton('Cancel')
+        self.cancelBtn.setStyleSheet(f"background-color: {self.default_colors['Background'].lighter().name()};"
+                                     f"color: {self.default_colors['ActiveText'].name()};")
+
+        btnLayout.addWidget(self.cancelBtn)
+
+        self.generalLayout.addLayout(btnLayout)
+
     def _deletedConfirm(self):
         # Confirm message
         # confirm = QtWidgets.QMessageBox.question(self, 'Title', 'message',
@@ -386,14 +498,18 @@ class _Edit(QtWidgets.QWidget):
 class AlarmWidget(QtWidgets.QWidget):
     clicked = QtCore.pyqtSignal(bool)
     deleted = QtCore.pyqtSignal(QtWidgets.QWidget)
+    cancelled = QtCore.pyqtSignal(QtWidgets.QWidget)
+    saved = QtCore.pyqtSignal(QtWidgets.QWidget)
 
-    def __init__(self, dow='', time='00:00am', message='Alarm', enabled=False, position=(0, 0), *args, **kwargs):
+    def __init__(self, dow='', time='00:00am', message='Alarm', enabled=False, position=(0, 0), newWidget=False, *args,
+                 **kwargs):
         super(AlarmWidget, self).__init__(*args, **kwargs)
         # Variables
         self.message = message
         self.time = time
         self.dow = dow
         self._position = position
+        self._newWidget = newWidget
 
         self.default_colors = {
             'ActiveText': QtGui.QColor('white'),
@@ -549,6 +665,7 @@ class AlarmWidget(QtWidgets.QWidget):
         # self._time.setPalette(palette)
 
     def Save(self):
+        self._newWidget = False
         return {
             'time': self.time,
             'dow': self.dow,
@@ -561,16 +678,29 @@ class AlarmWidget(QtWidgets.QWidget):
         # popup simple edit screen
         if self.editPopup is None:
             # self.editPopup = _Edit(parent=self.parent().parent())
-            self.editPopup = _Edit()
+            self.editPopup = _Edit(self._newWidget)
             self.editPopup.deleted.connect(self._deleteWidget)
+            self.editPopup.cancelled.connect(self._cancelledHandler)
+            self.editPopup.saved.connect(self._saveHandler)
             self.editPopup.show()
         else:
             self.editPopup.close()
             self.editPopup = None
 
+    def IsNewWidget(self):
+        return self._newWidget
+
+    def _saveHandler(self):
+        self.Edit()
+        self.saved.emit(self)
+
     def _deleteWidget(self):
         self.Edit()
         self.deleted.emit(self)
+
+    def _cancelledHandler(self):
+        self.Edit()
+        self.cancelled.emit(self)
 
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
         # if event.button() == Qt.LeftButton:
