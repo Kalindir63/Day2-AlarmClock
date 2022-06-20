@@ -28,7 +28,7 @@ ApplicationName = 'PyAlarm'
     qta-browser for icons
     TODO List
     0.5: accept time, message, dow (bit string) with class          *DONE*
-    1: Add new Alarms with message and settings                     **
+    1: Add new Alarms with message and settings                     *Started*
     2: Save alarms (with pos) and Load alarms                       *DONE* + GZIP Compression
     3: Edit alarm                                                   *Started*
     4: Delete Alarm                                                 *DONE*
